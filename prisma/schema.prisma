@@ -34,15 +34,17 @@ model List {
 }
 
 model Task {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String?
-  completed   Boolean  @default(false)
+  completed   Boolean   @default(false)
+  priority    String    @default("medium")
+  deadline    DateTime?
   order       Int
   listId      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  list        List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  list        List      @relation(fields: [listId], references: [id], onDelete: Cascade)
 
   @@map("tasks")
 }

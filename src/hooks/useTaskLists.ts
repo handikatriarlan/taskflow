@@ -9,6 +9,7 @@ interface Task {
   completed: boolean;
   order: number;
   listId: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 interface List {
@@ -54,16 +55,17 @@ export function useTaskLists() {
     }
   };
 
-  const addTask = async (listId: string, title: string) => {
+  const addTask = async (listId: string, title: string, priority: 'low' | 'medium' | 'high' = 'medium') => {
     try {
       const response = await axios.post(`/api/lists/${listId}/tasks`, {
         title,
-        order: lists.find(list => list.id === listId)?.tasks.length || 0
+        order: lists.find(list => list.id === listId)?.tasks.length || 0,
+        priority
       });
 
       setLists(lists.map(list => {
         if (list.id === listId) {
-          return { ...list, tasks: [...list.tasks, response.data] };
+          return { ...list, tasks: [...list.tasks, { ...response.data, priority }] };
         }
         return list;
       }));
@@ -80,7 +82,7 @@ export function useTaskLists() {
       setLists(lists.map(list => ({
         ...list,
         tasks: list.tasks.map(task => 
-          task.id === taskId ? response.data : task
+          task.id === taskId ? { ...response.data, priority: task.priority } : task
         )
       })));
     } catch (error) {
