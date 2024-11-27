@@ -34,6 +34,8 @@ const listSchema = z.object({
 const taskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  deadline: z.string().optional(),
   order: z.number().int()
 });
 
@@ -202,7 +204,7 @@ app.delete('/api/lists/:id', authenticateToken, async (req: any, res) => {
 // Tasks Routes
 app.post('/api/lists/:listId/tasks', authenticateToken, async (req: any, res) => {
   try {
-    const { title, description, order } = taskSchema.parse(req.body);
+    const { title, description, priority, deadline, order } = taskSchema.parse(req.body);
     
     const list = await prisma.list.findFirst({
       where: {
@@ -219,6 +221,8 @@ app.post('/api/lists/:listId/tasks', authenticateToken, async (req: any, res) =>
       data: {
         title,
         description,
+        priority: priority || 'medium',
+        deadline: deadline ? new Date(deadline) : undefined,
         order,
         listId: req.params.listId
       }
@@ -226,6 +230,7 @@ app.post('/api/lists/:listId/tasks', authenticateToken, async (req: any, res) =>
 
     res.json(task);
   } catch (error) {
+    console.error('Task creation error:', error);
     res.status(400).json({ error: 'Invalid input data' });
   }
 });
@@ -249,11 +254,16 @@ app.patch('/api/tasks/:id', authenticateToken, async (req: any, res) => {
       where: {
         id: req.params.id
       },
-      data: req.body
+      data: {
+        ...req.body,
+        priority: req.body.priority || task.priority,
+        deadline: req.body.deadline ? new Date(req.body.deadline) : task.deadline
+      }
     });
 
     res.json(updatedTask);
   } catch (error) {
+    console.error('Task update error:', error);
     res.status(400).json({ error: 'Invalid input data' });
   }
 });
