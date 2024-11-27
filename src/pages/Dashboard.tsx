@@ -212,7 +212,7 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold text-white">Taskflow</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-300">Welcome, {user?.name}</span>
+              <span className="text-gray-300">Welcome, {user?.name}!</span>
               <Button
                 variant="ghost"
                 onClick={handleLogout}
