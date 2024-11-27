@@ -4,7 +4,7 @@ import { LogOut, Plus, Layout } from 'lucide-react';
 import Button from '../components/Button';
 import ListCard from '../components/ListCard';
 import { useTaskLists } from '../hooks/useTaskLists';
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, closestCorners } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, closestCorners, pointerWithin } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
 
@@ -49,15 +49,24 @@ export default function Dashboard() {
     await addTask(listId, data.title, data.priority, data.deadline);
   };
 
+  const findListContainingTask = (taskId: string) => {
+    return lists.find(list => list.tasks.some(task => task.id === taskId));
+  };
+
+  const findTask = (taskId: string) => {
+    for (const list of lists) {
+      const task = list.tasks.find(t => t.id === taskId);
+      if (task) return task;
+    }
+    return null;
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const task = lists
-      .flatMap(list => list.tasks)
-      .find(task => task.id === active.id);
-    
+    const task = findTask(active.id as string);
     if (task) {
       setActiveTask(task);
-      setActiveList(task.listId);
+      setActiveList(findListContainingTask(task.id)?.id || null);
     }
   };
 
@@ -65,24 +74,24 @@ export default function Dashboard() {
     const { active, over } = event;
     if (!over || !activeTask) return;
 
-    const activeListId = lists.find(list => 
-      list.tasks.some(task => task.id === active.id)
-    )?.id;
+    const activeList = findListContainingTask(active.id as string);
+    const overList = lists.find(list => {
+      if (list.id === over.id) return true;
+      return list.tasks.some(task => task.id === over.id);
+    });
 
-    const overListId = lists.find(list => 
-      list.tasks.some(task => task.id === over.id) || list.id === over.id
-    )?.id;
-
-    if (!activeListId || !overListId || activeListId === overListId) return;
+    if (!activeList || !overList || activeList.id === overList.id) return;
 
     setLists(lists.map(list => {
-      if (list.id === activeListId) {
+      // Remove from old list
+      if (list.id === activeList.id) {
         return {
           ...list,
           tasks: list.tasks.filter(task => task.id !== active.id)
         };
       }
-      if (list.id === overListId) {
+      // Add to new list
+      if (list.id === overList.id) {
         const overTask = list.tasks.find(task => task.id === over.id);
         const updatedTasks = [...list.tasks];
         const insertIndex = overTask 
@@ -91,7 +100,7 @@ export default function Dashboard() {
 
         updatedTasks.splice(insertIndex, 0, {
           ...activeTask,
-          listId: overListId,
+          listId: overList.id,
           order: insertIndex
         });
 
@@ -111,51 +120,72 @@ export default function Dashboard() {
     const { active, over } = event;
     if (!over || !activeTask) return;
 
-    const activeListId = lists.find(list => 
-      list.tasks.some(task => task.id === active.id)
-    )?.id;
+    const activeList = findListContainingTask(active.id as string);
+    const overList = lists.find(list => {
+      if (list.id === over.id) return true;
+      return list.tasks.some(task => task.id === over.id);
+    });
 
-    const overListId = lists.find(list => 
-      list.tasks.some(task => task.id === over.id) || list.id === over.id
-    )?.id;
-
-    if (activeListId && overListId) {
-      if (activeListId === overListId) {
+    if (activeList && overList) {
+      if (activeList.id === overList.id) {
         // Reorder within the same list
-        const list = lists.find(l => l.id === activeListId)!;
-        const oldIndex = list.tasks.findIndex(t => t.id === active.id);
-        const newIndex = list.tasks.findIndex(t => t.id === over.id);
+        const oldIndex = activeList.tasks.findIndex(t => t.id === active.id);
+        const newIndex = activeList.tasks.findIndex(t => t.id === over.id);
 
-        setLists(lists.map(l => {
-          if (l.id === activeListId) {
-            const newTasks = arrayMove(l.tasks, oldIndex, newIndex);
-            return {
-              ...l,
-              tasks: newTasks.map((task, index) => ({
-                ...task,
-                order: index
-              }))
-            };
-          }
-          return l;
-        }));
+        if (oldIndex !== newIndex) {
+          const newTasks = arrayMove(activeList.tasks, oldIndex, newIndex);
+          setLists(lists.map(list => {
+            if (list.id === activeList.id) {
+              return {
+                ...list,
+                tasks: newTasks.map((task, index) => ({
+                  ...task,
+                  order: index
+                }))
+              };
+            }
+            return list;
+          }));
 
-        await updateTask(active.id, { 
-          order: newIndex,
-          listId: activeListId
-        });
+          await updateTask(active.id as string, { 
+            order: newIndex,
+            listId: activeList.id
+          });
+        }
       } else {
         // Move to different list
-        const overList = lists.find(l => l.id === overListId)!;
         const overTask = overList.tasks.find(t => t.id === over.id);
         const newOrder = overTask 
           ? overList.tasks.indexOf(overTask)
           : overList.tasks.length;
 
-        await updateTask(active.id, {
-          listId: overListId,
+        await updateTask(active.id as string, {
+          listId: overList.id,
           order: newOrder
         });
+
+        // Update local state to reflect the change
+        setLists(lists.map(list => {
+          if (list.id === activeList.id) {
+            return {
+              ...list,
+              tasks: list.tasks.filter(t => t.id !== active.id)
+            };
+          }
+          if (list.id === overList.id) {
+            const tasks = [...list.tasks];
+            tasks.splice(newOrder, 0, {
+              ...activeTask,
+              listId: overList.id,
+              order: newOrder
+            });
+            return {
+              ...list,
+              tasks: tasks.map((t, i) => ({ ...t, order: i }))
+            };
+          }
+          return list;
+        }));
       }
     }
 

@@ -9,7 +9,8 @@ interface Task {
   completed: boolean;
   order: number;
   listId: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high';
+  deadline?: string;
 }
 
 interface List {
@@ -55,17 +56,21 @@ export function useTaskLists() {
     }
   };
 
-  const addTask = async (listId: string, title: string, priority: 'low' | 'medium' | 'high' = 'medium') => {
+  const addTask = async (listId: string, title: string, priority: 'low' | 'medium' | 'high' = 'medium', deadline?: string) => {
     try {
       const response = await axios.post(`/api/lists/${listId}/tasks`, {
         title,
         order: lists.find(list => list.id === listId)?.tasks.length || 0,
-        priority
+        priority,
+        deadline
       });
 
       setLists(lists.map(list => {
         if (list.id === listId) {
-          return { ...list, tasks: [...list.tasks, { ...response.data, priority }] };
+          return {
+            ...list,
+            tasks: [...list.tasks, response.data]
+          };
         }
         return list;
       }));
@@ -79,14 +84,23 @@ export function useTaskLists() {
     setIsLoading(true);
     try {
       const response = await axios.patch(`/api/tasks/${taskId}`, updates);
+      
+      // Update local state to match server state
       setLists(lists.map(list => ({
         ...list,
         tasks: list.tasks.map(task => 
-          task.id === taskId ? { ...response.data, priority: task.priority } : task
+          task.id === taskId ? response.data : task
         )
       })));
+
+      // If the task was moved to a different list, refetch to ensure consistency
+      if (updates.listId) {
+        await fetchLists();
+      }
     } catch (error) {
       toast.error('Failed to update task');
+      // Refetch lists to ensure UI matches server state
+      await fetchLists();
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +134,7 @@ export function useTaskLists() {
     addTask,
     updateTask,
     deleteTask,
-    setLists
+    setLists,
+    fetchLists
   };
 }

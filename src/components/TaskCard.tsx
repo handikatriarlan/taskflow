@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, Grip, Trash2, Clock, AlertCircle, Calendar } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TaskCardProps {
   id: string;
@@ -34,6 +34,7 @@ export default function TaskCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 50 : 1,
   };
 
   const priorityColors = {
@@ -56,13 +57,22 @@ export default function TaskCard({
       ref={setNodeRef}
       style={style}
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ 
+        opacity: isDragging ? 0.6 : 1,
+        y: 0,
+        scale: isDragging ? 1.05 : 1,
+        boxShadow: isDragging ? '0 8px 24px rgba(0, 0, 0, 0.2)' : 'none'
+      }}
       exit={{ opacity: 0, y: -20 }}
+      transition={{
+        duration: 0.2,
+        ease: 'easeInOut'
+      }}
       className={`group flex items-center space-x-3 p-4 rounded-xl border ${
         priorityColors[priority]
       } backdrop-blur-sm transition-all duration-200 ${
-        isDragging ? 'opacity-50 scale-105' : ''
-      } ${completed ? 'opacity-60' : ''}`}
+        completed ? 'opacity-60' : ''
+      }`}
     >
       <button
         {...attributes}
@@ -97,6 +107,7 @@ export default function TaskCard({
             <Calendar className="h-3 w-3" />
             <span>
               {deadlineDate.toLocaleDateString()} {deadlineDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {isOverdue && ' (Overdue)'}
             </span>
           </div>
         )}
