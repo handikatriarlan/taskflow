@@ -15,11 +15,11 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^5.22.0",
-    "axios": "^1.12.0",
+    "axios": "^1.21.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.22.1",
+    "express": "^4.22.3",
     "framer-motion": "^11.0.8",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.344.0",
@@ -27,7 +27,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.30.3",
+    "react-router-dom": "^7.18.6",
     "zod": "^4.6.6"
   },
   "devDependencies": {
@@ -46,11 +46,18 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "postcss": "^8.4.35",
+    "postcss": "^8.5.33",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.4",
     "typescript": "^5.3.3",
-    "vite": "^6.4.1"
+    "vite": "^6.4.6"
+  },
+  "overrides": {
+    "proxy-addr": "^2.0.8",
+    "js-yaml": "^4.3.2",
+    "brace-expansion@^1.0.0": "1.1.21",
+    "brace-expansion@^2.0.0": "2.1.7",
+    "browserslist": "^4.28.7"
   }
 }
